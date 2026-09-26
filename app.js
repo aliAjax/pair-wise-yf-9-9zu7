@@ -1,8 +1,11 @@
 const storageKey = "zfl18-boardgame-rule-cards";
 const today = new Date();
+const maxPicks = 5;
+const recentDays = 7;
 
 const defaultState = {
   selectedId: "",
+  tonight: { players: 4, duration: 120, picks: [] },
   games: [
     {
       id: crypto.randomUUID(),
@@ -51,6 +54,8 @@ const defaultState = {
 
 let state = loadState();
 if (!state.selectedId) state.selectedId = state.games[0]?.id || "";
+if (!state.tonight) state.tonight = structuredClone(defaultState.tonight);
+state.tonight.picks = state.tonight.picks.filter((id) => state.games.some((game) => game.id === id));
 
 const els = {
   searchInput: document.querySelector("#searchInput"),
@@ -70,7 +75,13 @@ const els = {
   gameCount: document.querySelector("#gameCount"),
   ruleCount: document.querySelector("#ruleCount"),
   staleGame: document.querySelector("#staleGame"),
-  visibleCount: document.querySelector("#visibleCount")
+  visibleCount: document.querySelector("#visibleCount"),
+  tonightPlayers: document.querySelector("#tonightPlayers"),
+  tonightDuration: document.querySelector("#tonightDuration"),
+  tonightHint: document.querySelector("#tonightHint"),
+  tonightCount: document.querySelector("#tonightCount"),
+  tonightMatches: document.querySelector("#tonightMatches"),
+  tonightPicks: document.querySelector("#tonightPicks")
 };
 
 function loadState() {
@@ -124,6 +135,104 @@ function renderSummary() {
   els.staleGame.textContent = stale ? `${daysSince(stale.lastPlayed)}天` : "-";
 }
 
+function getTonightMatches() {
+  const players = Number(state.tonight.players);
+  const duration = Number(state.tonight.duration);
+  if (!players || !duration) return [];
+  return state.games
+    .filter((game) => players >= game.minPlayers && players <= game.maxPlayers && game.duration <= duration)
+    .sort((a, b) => {
+      const aRecent = daysSince(a.lastPlayed) < recentDays ? 1 : 0;
+      const bRecent = daysSince(b.lastPlayed) < recentDays ? 1 : 0;
+      if (aRecent !== bRecent) return aRecent - bRecent;
+      return daysSince(b.lastPlayed) - daysSince(a.lastPlayed);
+    });
+}
+
+function renderTonight() {
+  els.tonightPlayers.value = state.tonight.players;
+  els.tonightDuration.value = state.tonight.duration;
+  els.tonightCount.textContent = `已选 ${state.tonight.picks.length}/${maxPicks}`;
+
+  const matches = getTonightMatches();
+  els.tonightMatches.innerHTML =
+    matches
+      .map((game) => {
+        const days = daysSince(game.lastPlayed);
+        const picked = state.tonight.picks.includes(game.id);
+        const recent = days < recentDays;
+        return `
+          <div class="tonight-item ${recent ? "recent" : ""}">
+            <div class="tonight-item-info">
+              <strong>${escapeHtml(game.name)}</strong>
+              <div class="game-meta">
+                <span class="pill">${game.minPlayers}-${game.maxPlayers}人</span>
+                <span class="pill">${game.duration}分钟</span>
+                <span class="pill">${days}天未玩</span>
+                ${recent ? `<span class="pill warn">7天内玩过 · 不推荐</span>` : ""}
+              </div>
+            </div>
+            ${
+              picked
+                ? `<button type="button" disabled>已加入</button>`
+                : `<button type="button" data-pick-add="${game.id}">加入候选</button>`
+            }
+          </div>
+        `;
+      })
+      .join("") || `<p class="empty">没有人数和时长都合适的桌游。</p>`;
+
+  const picks = state.tonight.picks
+    .map((id) => state.games.find((game) => game.id === id))
+    .filter(Boolean);
+  els.tonightPicks.innerHTML =
+    picks
+      .map(
+        (game) => `
+          <div class="tonight-item picked">
+            <div class="tonight-item-info">
+              <strong>${escapeHtml(game.name)}</strong>
+              <div class="game-meta">
+                <span class="pill">${game.minPlayers}-${game.maxPlayers}人</span>
+                <span class="pill">${game.duration}分钟</span>
+                <span class="pill">${daysSince(game.lastPlayed)}天未玩</span>
+              </div>
+            </div>
+            <button type="button" data-pick-remove="${game.id}">移除</button>
+          </div>
+        `
+      )
+      .join("") || `<p class="empty">还没有候选，从左侧挑几款加入。</p>`;
+}
+
+function showTonightHint(message) {
+  els.tonightHint.textContent = message;
+  els.tonightHint.hidden = !message;
+  if (message) {
+    clearTimeout(showTonightHint.timer);
+    showTonightHint.timer = setTimeout(() => {
+      els.tonightHint.hidden = true;
+    }, 3000);
+  }
+}
+
+function addPick(id) {
+  if (state.tonight.picks.includes(id)) return;
+  if (state.tonight.picks.length >= maxPicks) {
+    showTonightHint(`候选已满（最多${maxPicks}款），请先从候选清单移除一款再补充。`);
+    return;
+  }
+  state.tonight.picks.push(id);
+  showTonightHint("");
+  renderAll();
+}
+
+function removePick(id) {
+  state.tonight.picks = state.tonight.picks.filter((pickId) => pickId !== id);
+  showTonightHint("");
+  renderAll();
+}
+
 function renderList() {
   const games = getFilteredGames();
   els.visibleCount.textContent = `${games.length}个匹配`;
@@ -131,8 +240,9 @@ function renderList() {
     games
       .map((game) => {
         const selected = game.id === state.selectedId ? "selected" : "";
+        const picked = state.tonight.picks.includes(game.id);
         return `
-          <article class="game-card ${selected}" data-game-id="${game.id}">
+          <article class="game-card ${selected} ${picked ? "picked" : ""}" data-game-id="${game.id}">
             <div class="cover">
               ${
                 game.cover
@@ -140,6 +250,7 @@ function renderList() {
                   : `<span>${escapeHtml(game.name.slice(0, 2))}</span>`
               }
               <span class="stale-ribbon">${daysSince(game.lastPlayed)}天未玩</span>
+              ${picked ? `<span class="picked-ribbon">今晚候选</span>` : ""}
             </div>
             <div class="game-body">
               <h3>${escapeHtml(game.name)}</h3>
@@ -223,6 +334,7 @@ function renderRuleSection(title, key, items) {
 function renderAll() {
   saveState();
   renderSummary();
+  renderTonight();
   renderList();
   renderDetail();
 }
@@ -287,6 +399,23 @@ els.complexityFilter.addEventListener("change", renderAll);
 els.sortMode.addEventListener("change", renderAll);
 els.gameForm.addEventListener("submit", addGame);
 
+els.tonightPlayers.addEventListener("input", () => {
+  state.tonight.players = Number(els.tonightPlayers.value);
+  renderAll();
+});
+
+els.tonightDuration.addEventListener("input", () => {
+  state.tonight.duration = Number(els.tonightDuration.value);
+  renderAll();
+});
+
+document.querySelector(".tonight-panel").addEventListener("click", (event) => {
+  const addButton = event.target.closest("[data-pick-add]");
+  const removeButton = event.target.closest("[data-pick-remove]");
+  if (addButton) addPick(addButton.dataset.pickAdd);
+  if (removeButton) removePick(removeButton.dataset.pickRemove);
+});
+
 els.gameList.addEventListener("click", (event) => {
   const card = event.target.closest("[data-game-id]");
   if (!card) return;
@@ -327,6 +456,7 @@ els.detailView.addEventListener("click", (event) => {
 
   if (deleteButton) {
     state.games = state.games.filter((item) => item.id !== game.id);
+    state.tonight.picks = state.tonight.picks.filter((id) => id !== game.id);
     state.selectedId = state.games[0]?.id || "";
     renderAll();
   }

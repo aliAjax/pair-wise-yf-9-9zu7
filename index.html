@@ -63,6 +63,34 @@
         </label>
       </section>
 
+      <section class="panel tonight-panel">
+        <div class="panel-head">
+          <h2>今晚候选区</h2>
+          <span id="tonightCount"></span>
+        </div>
+        <div class="tonight-controls">
+          <label>
+            今晚人数
+            <input id="tonightPlayers" type="number" min="1" max="12" />
+          </label>
+          <label>
+            可玩时长（分钟）
+            <input id="tonightDuration" type="number" min="5" step="5" />
+          </label>
+        </div>
+        <p id="tonightHint" class="tonight-hint" hidden></p>
+        <div class="tonight-columns">
+          <div>
+            <h3>符合条件（按未玩天数从久到近）</h3>
+            <div id="tonightMatches" class="tonight-matches"></div>
+          </div>
+          <div>
+            <h3>候选清单（最多5款）</h3>
+            <div id="tonightPicks" class="tonight-picks"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="layout">
         <aside class="panel">
           <h2>新增桌游</h2>

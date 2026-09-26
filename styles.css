@@ -369,6 +369,102 @@ label {
   flex: 1;
 }
 
+.tonight-panel {
+  margin-bottom: 16px;
+}
+
+.tonight-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 220px));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tonight-hint {
+  margin: 0 0 10px;
+  border: 1px solid rgba(179, 72, 72, 0.4);
+  border-radius: 6px;
+  background: rgba(179, 72, 72, 0.08);
+  color: var(--red);
+  padding: 9px 11px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tonight-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.tonight-matches,
+.tonight-picks {
+  display: grid;
+  gap: 8px;
+}
+
+.tonight-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 9px 11px;
+}
+
+.tonight-item.recent {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
+.tonight-item.picked {
+  border-color: var(--green);
+  background: rgba(57, 116, 91, 0.06);
+}
+
+.tonight-item-info {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tonight-item button {
+  flex: 0 0 auto;
+  padding: 8px 11px;
+}
+
+.tonight-item button:disabled {
+  border-color: var(--green);
+  background: rgba(57, 116, 91, 0.12);
+  color: var(--green);
+  cursor: default;
+  font-weight: 800;
+}
+
+.pill.warn {
+  background: rgba(179, 72, 72, 0.1);
+  color: var(--red);
+}
+
+.game-card.picked {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(57, 116, 91, 0.35);
+}
+
+.picked-ribbon {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  padding: 6px 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 @media (max-width: 1160px) {
   .topbar {
     align-items: stretch;
@@ -376,7 +472,8 @@ label {
   }
 
   .controls,
-  .layout {
+  .layout,
+  .tonight-columns {
     grid-template-columns: 1fr;
   }
 
@@ -391,7 +488,8 @@ label {
   }
 
   .summary,
-  .split {
+  .split,
+  .tonight-controls {
     grid-template-columns: 1fr;
   }
 }
