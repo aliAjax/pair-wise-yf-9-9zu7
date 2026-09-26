@@ -47,6 +47,15 @@ button:hover {
   border-color: var(--blue);
 }
 
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  border-color: var(--line);
+}
+
 button.primary {
   background: var(--ink);
   border-color: var(--ink);
@@ -282,6 +291,119 @@ label {
   color: var(--lavender);
 }
 
+.tonight-panel {
+  margin-bottom: 16px;
+}
+
+.tonight-hint {
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.tonight-controls {
+  display: grid;
+  grid-template-columns: 160px 180px 1fr;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.tonight-controls .check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+.tonight-controls .check input {
+  width: auto;
+}
+
+.tonight-columns {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.tonight-col h3 small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.suggest-list,
+.candidate-list {
+  display: grid;
+  gap: 8px;
+}
+
+.suggest-item,
+.candidate-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 9px 11px;
+}
+
+.suggest-item.recent {
+  border-style: dashed;
+}
+
+.suggest-info,
+.candidate-info {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.suggest-info strong,
+.candidate-info strong {
+  font-size: 14px;
+}
+
+.pill.recent-tag {
+  background: rgba(179, 72, 72, 0.12);
+  color: var(--red);
+}
+
+.suggest-item button,
+.candidate-item button {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+}
+
+.candidate-item {
+  border-color: var(--green);
+  border-left-width: 4px;
+}
+
+.candidate-item button {
+  color: var(--red);
+}
+
+.game-card.in-candidates {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(57, 116, 91, 0.25);
+}
+
+.candidate-badge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .detail-panel {
   position: sticky;
   top: 18px;
@@ -391,7 +513,13 @@ label {
   }
 
   .summary,
-  .split {
+  .split,
+  .tonight-controls,
+  .tonight-columns {
     grid-template-columns: 1fr;
+  }
+
+  .tonight-controls .check {
+    padding-bottom: 0;
   }
 }

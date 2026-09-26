@@ -63,6 +63,37 @@
         </label>
       </section>
 
+      <section class="panel tonight-panel">
+        <div class="panel-head">
+          <h2>今晚候选</h2>
+          <span id="tonightHint" class="tonight-hint" role="status"></span>
+        </div>
+        <div class="tonight-controls">
+          <label>
+            今晚人数
+            <input id="tonightPlayersInput" type="number" min="1" max="12" placeholder="如 4" />
+          </label>
+          <label>
+            可玩时长（分钟）
+            <input id="tonightDurationInput" type="number" min="5" placeholder="如 120" />
+          </label>
+          <label class="check">
+            <input id="includeRecentInput" type="checkbox" />
+            包含最近7天玩过的
+          </label>
+        </div>
+        <div class="tonight-columns">
+          <div class="tonight-col">
+            <h3>合适的游戏 <small>按未玩天数从久到近</small></h3>
+            <div id="suggestList" class="suggest-list"></div>
+          </div>
+          <div class="tonight-col">
+            <h3>候选名单（<span id="candidateCount">0</span>/5）</h3>
+            <div id="candidateList" class="candidate-list"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="layout">
         <aside class="panel">
           <h2>新增桌游</h2>

@@ -1,8 +1,16 @@
 const storageKey = "zfl18-boardgame-rule-cards";
 const today = new Date();
+const MAX_CANDIDATES = 5;
+const RECENT_DAYS = 7;
 
 const defaultState = {
   selectedId: "",
+  tonight: {
+    players: "",
+    duration: "",
+    includeRecent: false,
+    candidates: []
+  },
   games: [
     {
       id: crypto.randomUUID(),
@@ -51,6 +59,9 @@ const defaultState = {
 
 let state = loadState();
 if (!state.selectedId) state.selectedId = state.games[0]?.id || "";
+state.tonight.candidates = [...new Set(state.tonight.candidates)].filter((id) =>
+  state.games.some((game) => game.id === id)
+);
 
 const els = {
   searchInput: document.querySelector("#searchInput"),
@@ -70,7 +81,14 @@ const els = {
   gameCount: document.querySelector("#gameCount"),
   ruleCount: document.querySelector("#ruleCount"),
   staleGame: document.querySelector("#staleGame"),
-  visibleCount: document.querySelector("#visibleCount")
+  visibleCount: document.querySelector("#visibleCount"),
+  tonightPlayersInput: document.querySelector("#tonightPlayersInput"),
+  tonightDurationInput: document.querySelector("#tonightDurationInput"),
+  includeRecentInput: document.querySelector("#includeRecentInput"),
+  tonightHint: document.querySelector("#tonightHint"),
+  suggestList: document.querySelector("#suggestList"),
+  candidateList: document.querySelector("#candidateList"),
+  candidateCount: document.querySelector("#candidateCount")
 };
 
 function loadState() {
@@ -116,6 +134,93 @@ function getFilteredGames() {
   return games.sort((a, b) => daysSince(b.lastPlayed) - daysSince(a.lastPlayed));
 }
 
+function isCandidate(gameId) {
+  return state.tonight.candidates.includes(gameId);
+}
+
+function showTonightHint(message) {
+  els.tonightHint.textContent = message;
+}
+
+function getTonightMatches() {
+  const players = Number(state.tonight.players);
+  const duration = Number(state.tonight.duration);
+  if (!players || !duration) return null;
+  return state.games
+    .filter(
+      (game) => players >= game.minPlayers && players <= game.maxPlayers && game.duration <= duration
+    )
+    .sort(
+      (a, b) =>
+        daysSince(b.lastPlayed) - daysSince(a.lastPlayed) || a.name.localeCompare(b.name, "zh-CN")
+    );
+}
+
+function renderTonight() {
+  els.tonightPlayersInput.value = state.tonight.players;
+  els.tonightDurationInput.value = state.tonight.duration;
+  els.includeRecentInput.checked = state.tonight.includeRecent;
+
+  const matches = getTonightMatches();
+  if (!matches) {
+    els.suggestList.innerHTML = `<p class="empty">填好人数和可玩时长，这里会列出合适的游戏。</p>`;
+  } else if (matches.length === 0) {
+    els.suggestList.innerHTML = `<p class="empty">没有人数和时长都合适的游戏。</p>`;
+  } else {
+    const visible = matches.filter(
+      (game) => state.tonight.includeRecent || daysSince(game.lastPlayed) >= RECENT_DAYS
+    );
+    els.suggestList.innerHTML =
+      visible
+        .map((game) => {
+          const days = daysSince(game.lastPlayed);
+          const recent = days < RECENT_DAYS;
+          const added = isCandidate(game.id);
+          return `
+            <div class="suggest-item ${recent ? "recent" : ""}">
+              <div class="suggest-info">
+                <strong>${escapeHtml(game.name)}</strong>
+                <div class="game-meta">
+                  <span class="pill">${game.minPlayers}-${game.maxPlayers}人</span>
+                  <span class="pill">${game.duration}分钟</span>
+                  <span class="pill">${days}天未玩</span>
+                  ${recent ? `<span class="pill recent-tag">7天内玩过</span>` : ""}
+                </div>
+              </div>
+              <button type="button" data-add-id="${game.id}" ${added ? "disabled" : ""}>
+                ${added ? "已加入" : "加入候选"}
+              </button>
+            </div>
+          `;
+        })
+        .join("") ||
+      `<p class="empty">人数和时长合适的游戏最近7天都玩过，可勾选“包含最近7天玩过的”查看。</p>`;
+  }
+
+  const candidateGames = state.tonight.candidates
+    .map((id) => state.games.find((game) => game.id === id))
+    .filter(Boolean);
+  els.candidateCount.textContent = candidateGames.length;
+  els.candidateList.innerHTML =
+    candidateGames
+      .map(
+        (game) => `
+          <div class="candidate-item">
+            <div class="candidate-info">
+              <strong>${escapeHtml(game.name)}</strong>
+              <div class="game-meta">
+                <span class="pill">${game.minPlayers}-${game.maxPlayers}人</span>
+                <span class="pill">${game.duration}分钟</span>
+                <span class="pill">${daysSince(game.lastPlayed)}天未玩</span>
+              </div>
+            </div>
+            <button type="button" data-remove-id="${game.id}">移除</button>
+          </div>
+        `
+      )
+      .join("") || `<p class="empty">候选还是空的，从左边合适的游戏里挑，最多${MAX_CANDIDATES}款。</p>`;
+}
+
 function renderSummary() {
   const allRuleCount = state.games.reduce((sum, game) => sum + getAllRules(game).length, 0);
   const stale = [...state.games].sort((a, b) => daysSince(b.lastPlayed) - daysSince(a.lastPlayed))[0];
@@ -131,14 +236,16 @@ function renderList() {
     games
       .map((game) => {
         const selected = game.id === state.selectedId ? "selected" : "";
+        const inCandidates = isCandidate(game.id);
         return `
-          <article class="game-card ${selected}" data-game-id="${game.id}">
+          <article class="game-card ${selected} ${inCandidates ? "in-candidates" : ""}" data-game-id="${game.id}">
             <div class="cover">
               ${
                 game.cover
                   ? `<img src="${game.cover}" alt="${escapeHtml(game.name)}封面" />`
                   : `<span>${escapeHtml(game.name.slice(0, 2))}</span>`
               }
+              ${inCandidates ? `<span class="candidate-badge">今晚候选</span>` : ""}
               <span class="stale-ribbon">${daysSince(game.lastPlayed)}天未玩</span>
             </div>
             <div class="game-body">
@@ -223,6 +330,7 @@ function renderRuleSection(title, key, items) {
 function renderAll() {
   saveState();
   renderSummary();
+  renderTonight();
   renderList();
   renderDetail();
 }
@@ -287,6 +395,45 @@ els.complexityFilter.addEventListener("change", renderAll);
 els.sortMode.addEventListener("change", renderAll);
 els.gameForm.addEventListener("submit", addGame);
 
+els.tonightPlayersInput.addEventListener("input", () => {
+  state.tonight.players = els.tonightPlayersInput.value;
+  showTonightHint("");
+  renderAll();
+});
+
+els.tonightDurationInput.addEventListener("input", () => {
+  state.tonight.duration = els.tonightDurationInput.value;
+  showTonightHint("");
+  renderAll();
+});
+
+els.includeRecentInput.addEventListener("change", () => {
+  state.tonight.includeRecent = els.includeRecentInput.checked;
+  renderAll();
+});
+
+els.suggestList.addEventListener("click", (event) => {
+  const addButton = event.target.closest("[data-add-id]");
+  if (!addButton) return;
+  const gameId = addButton.dataset.addId;
+  if (isCandidate(gameId)) return;
+  if (state.tonight.candidates.length >= MAX_CANDIDATES) {
+    showTonightHint(`候选最多${MAX_CANDIDATES}款，请先在右侧移除一款再添加。`);
+    return;
+  }
+  state.tonight.candidates.push(gameId);
+  showTonightHint("");
+  renderAll();
+});
+
+els.candidateList.addEventListener("click", (event) => {
+  const removeButton = event.target.closest("[data-remove-id]");
+  if (!removeButton) return;
+  state.tonight.candidates = state.tonight.candidates.filter((id) => id !== removeButton.dataset.removeId);
+  showTonightHint("");
+  renderAll();
+});
+
 els.gameList.addEventListener("click", (event) => {
   const card = event.target.closest("[data-game-id]");
   if (!card) return;
@@ -327,6 +474,7 @@ els.detailView.addEventListener("click", (event) => {
 
   if (deleteButton) {
     state.games = state.games.filter((item) => item.id !== game.id);
+    state.tonight.candidates = state.tonight.candidates.filter((id) => id !== game.id);
     state.selectedId = state.games[0]?.id || "";
     renderAll();
   }
